@@ -22,7 +22,7 @@ extern "C" {
 
 #define PROFILE_NAME "__profile.map"
 #define MAX_FINE_NAME_SIZE 30
-#define NUMBER_TC_RTNS 10
+/*#define NUMBER_TC_RTNS 10*/
 
 #define debug(x) (cerr << x << endl )
 
@@ -43,6 +43,9 @@ KNOB<BOOL>   KnobDumpTranslatedCode(KNOB_MODE_WRITEONCE,    "pintool",
 
 KNOB<BOOL>   KnobDoNotCommitTranslatedCode(KNOB_MODE_WRITEONCE,    "pintool",
     "no_tc_commit", "0", "Do not commit translated code");
+
+KNOB<BOOL>   KnobOptMostFreqRtn(KNOB_MODE_WRITEONCE,    "pintool",
+    "opt", "0", "Optimize most frequent routine");
 
 
 
@@ -293,7 +296,8 @@ list<RTN_Class*> rtn_list;
 USIZE instrCountTableSize = 0;
 
 //for ex3
-list<ADDRINT> top10_rtn_addr; //out
+list<ADDRINT> top_rtn_addrs; //out
+int NUMBER_TC_RTNS; //make it global parameter to use same interface in ex4
 
 std::ofstream* out = 0;
 
@@ -374,8 +378,8 @@ bool compareEdge(const Edge_Class* lhs, const Edge_Class* rhs)
 
 bool isTopTenRTN(RTN rtn){
     ADDRINT rtnAdd = RTN_Address(rtn);
-    std::list<ADDRINT>::iterator itr = std::find(top10_rtn_addr.begin(), top10_rtn_addr.end(), rtnAdd);
-    if(itr == top10_rtn_addr.end()) return false;
+    std::list<ADDRINT>::iterator itr = std::find(top_rtn_addrs.begin(), top_rtn_addrs.end(), rtnAdd);
+    if(itr == top_rtn_addrs.end()) return false;
     return true;
 }
 
@@ -1545,7 +1549,7 @@ VOID setTopRtnAddr()
 		{
 			j++;
 		}
-		top10_rtn_addr.push_front(addr);
+		top_rtn_addrs.push_front(addr);
 		//cerr << StringHex(addr, 1) << "   And the number is: " << rtn_cnt << endl;
 	}
 	
@@ -1602,6 +1606,8 @@ int main(int argc, char * argv[])
     
     //run in probe mode and generate the binary code of the top 10 routines
     else if(KnobGenerateBinary){ 
+		NUMBER_TC_RTNS = 10;
+		
 		//Set RTNs
 		setTopRtnAddr();
 		
@@ -1612,7 +1618,16 @@ int main(int argc, char * argv[])
          PIN_StartProgramProbed();
         return 0;
     }
-    else
+    else if(KnobOptMostFreqRtn)
+	{
+		NUMBER_TC_RTNS = 1;
+		
+		//To use the same interfaces as ex3
+		setTopRtnAddr();
+		cerr << StringHex(top_rtn_addrs.front(),1) << endl;
+		PIN_StartProgram();
+	}
+	else
         PIN_StartProgram();
     
 	  //  return Usage1();
