@@ -1623,6 +1623,11 @@ VOID setBlockInsStartAddr(RTN rtn)
 			new_bbl->start = new_bbl_addr;
 			//Move to the instruction you jump to (or not if you fall through)
 		}
+		
+		if (INS_IsDirectBranchOrCall(ins))
+		{
+			//Move to the next address. We will close this bbl later
+		}
 	}
 	RTN_Close(rtn);
 }
