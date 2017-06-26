@@ -67,7 +67,7 @@ class BBL_Class {
 public:
 	ADDRINT start;
     ADDRINT finish;
-    UINT id;
+    UINT id; //Used as count in ex4
 	
 	BBL_Class():
         start(0), finish(0), id(0){
@@ -300,6 +300,9 @@ list<ADDRINT> top_rtn_addrs; //out
 int NUMBER_TC_RTNS; //make it global parameter to use same interface in ex4
 
 std::ofstream* out = 0;
+
+//for ex4
+list<BBL_Class*> bbl_list;
 
 // For XED:
 #if defined(TARGET_IA32E)
@@ -1556,6 +1559,96 @@ VOID setTopRtnAddr()
 	//fd.close();
 }
 
+/* ===================================================================== */
+/* Our ex4 functions	                                                 */
+/* ===================================================================== */
+BOOL INS_IsIndirectBranchOrCall(INS ins)
+{
+    return  INS_IsBranchOrCall(ins) && !INS_IsDirectBranchOrCall(ins);
+}
+ 
+BOOL INS_IsBranchOrCall(INS ins)
+{
+    if (INS_IsSyscall(ins))
+    {
+        return INS_SyscallIsTakenBranch(ins);
+    }
+ 
+    xed_decoded_inst_t* xedd = INS_xed_dec(ins);
+    switch( xed_decoded_inst_get_category(xedd) )
+    {
+      case XED_CATEGORY_RET:
+      case XED_CATEGORY_CALL:
+      case XED_CATEGORY_COND_BR:
+      case XED_CATEGORY_UNCOND_BR:
+        return true;
+      default:
+        return false;
+    }
+}
+ 
+BOOL INS_IsDirectBranchOrCall(INS ins)
+{
+    if ( INS_IsBranchOrCall(ins) )
+        if (!INS_IsFarJump(ins) && !INS_IsFarCall(ins)) {
+            // Looking for relative branches or calls. So they must have a
+            // displacement and that displacement must not be for the memory
+            // operation.
+            xed_operand_values_t* xedv = INS_xed_operand_values(ins);
+            return xed_operand_values_has_branch_displacement(xedv);
+        }
+    return false;
+}
+
+
+VOID setBlockInsStartAddr(RTN rtn)
+{
+	RTN_Open(rtn);
+	INS ins = RTN_InsHead(rtn);
+	
+	for ( ins ; INS_Valid(ins) ; ins = INS_Next(ins))
+	{
+		if (INS_IsDirectBranchOrCall(ins))
+		{
+			ADDRINT new_bbl_addr = INS_DirectBranchOrCallTargetAddress(ins);
+			if(INS_Category(ins) == XED_CATEGORY_COND_BR)
+			{
+				
+			}
+			if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || INS_Category(ins) == XED_CATEGORY_CALL || INS_Category(ins) == XED_CATEGORY_RET)
+			{
+				
+			}
+			BBL_Class* new_bbl = new BBL_Class();
+			new_bbl->start = new_bbl_addr;
+			//Move to the instruction you jump to (or not if you fall through)
+		}
+	}
+	RTN_Close(rtn);
+}
+	
+VOID ImageLoad_ex4(IMG img, VOID *v)
+{
+	if (!IMG_IsMainExecutable(img))
+		return;
+	
+	ADDRINT top_rtn_addr = top_rtn_addrs.front();
+	for (SEC sec = IMG_SecHead(img); SEC_Valid(sec); sec = SEC_Next(sec)) //Iterate through sections and RTN's
+    {   
+		if (!SEC_IsExecutable(sec) || SEC_IsWriteable(sec) || !SEC_Address(sec))
+			continue;
+
+        for (RTN rtn = SEC_RtnHead(sec); RTN_Valid(rtn); rtn = RTN_Next(rtn))
+        {	
+			if(RTN_Address(rtn) != top_rtn_addr)
+				continue;
+			setBlockInsStartAddr(rtn);
+		}
+	}
+	
+	
+}
+
 
 /* ===================================================================== */
 /* Print Help Message                                                    */
@@ -1624,8 +1717,10 @@ int main(int argc, char * argv[])
 		
 		//To use the same interfaces as ex3
 		setTopRtnAddr();
-		cerr << StringHex(top_rtn_addrs.front(),1) << endl; //TESTING TOP RTN ADRESS
-		PIN_StartProgram();
+		
+		
+		//cerr << StringHex(top_rtn_addrs.front(),1) << endl; //TESTING TOP RTN ADRESS
+		PIN_StartProgramProbed();
 	}
 	else
         PIN_StartProgram();
