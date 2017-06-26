@@ -1624,7 +1624,7 @@ int main(int argc, char * argv[])
 		
 		//To use the same interfaces as ex3
 		setTopRtnAddr();
-		cerr << StringHex(top_rtn_addrs.front(),1) << endl;
+		cerr << StringHex(top_rtn_addrs.front(),1) << endl; //TESTING TOP RTN ADRESS
 		PIN_StartProgram();
 	}
 	else
