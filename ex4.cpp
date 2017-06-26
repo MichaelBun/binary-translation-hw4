@@ -1562,7 +1562,7 @@ VOID setTopRtnAddr()
 /* ===================================================================== */
 /* Our ex4 functions	                                                 */
 /* ===================================================================== */
-BOOL INS_IsIndirectBranchOrCall(INS ins)
+/*BOOL INS_IsIndirectBranchOrCall(INS ins)
 {
     return  INS_IsBranchOrCall(ins) && !INS_IsDirectBranchOrCall(ins);
 }
@@ -1599,7 +1599,7 @@ BOOL INS_IsDirectBranchOrCall(INS ins)
         }
     return false;
 }
-
+*/
 
 VOID setBlockInsStartAddr(RTN rtn)
 {
@@ -1607,21 +1607,35 @@ VOID setBlockInsStartAddr(RTN rtn)
 	INS ins = RTN_InsHead(rtn);
 	BBL_Class* new_bbl = new BBL_Class();
 	new_bbl->start = INS_Address(ins);
-	for ( ins ; INS_Valid(ins) ; ins = INS_Next(ins))
+	bbl_list.push_back(new_bbl);
+	for ( ; INS_Valid(ins) ; ins = INS_Next(ins))
 	{
 		if (INS_IsDirectBranchOrCall(ins))
 		{
 			ADDRINT new_bbl_addr = INS_DirectBranchOrCallTargetAddress(ins);
+			bool was_cond = false;
 			if(INS_Category(ins) == XED_CATEGORY_COND_BR)
 			{
-				//Add basic block of fallthrough and jmp target
+				was_cond = true;
+				BBL_Class* new_bbl1 = new BBL_Class();
+				BBL_Class* new_bbl2 = new BBL_Class();
+				new_bbl1->start = new_bbl_addr;
+				new_bbl2->start = INS_NextAddress(ins);
+				bbl_list.push_back(new_bbl1);
+				bbl_list.push_back(new_bbl2);
 			}
-			if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || INS_Category(ins) == XED_CATEGORY_CALL || INS_Category(ins) == XED_CATEGORY_RET)
+			else if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || INS_Category(ins) == XED_CATEGORY_CALL || INS_Category(ins) == XED_CATEGORY_RET)
 			{
-				//Add basic block only in jump target
+				BBL_Class* new_bbl1 = new BBL_Class();
+				new_bbl1->start = new_bbl_addr;
+				bbl_list.push_back(new_bbl1);
+				
 			}
-			BBL_Class* new_bbl = new BBL_Class();
-			new_bbl->start = new_bbl_addr;
+			
+			
+			if(was_cond)
+				continue;
+			//ins = FindInsByAddress
 			//Move to the instruction you jump to (or not if you fall through)
 		}
 		
