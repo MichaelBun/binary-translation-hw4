@@ -1605,7 +1605,8 @@ VOID setBlockInsStartAddr(RTN rtn)
 {
 	RTN_Open(rtn);
 	INS ins = RTN_InsHead(rtn);
-	
+	BBL_Class* new_bbl = new BBL_Class();
+	new_bbl->start = INS_Address(ins);
 	for ( ins ; INS_Valid(ins) ; ins = INS_Next(ins))
 	{
 		if (INS_IsDirectBranchOrCall(ins))
@@ -1613,18 +1614,18 @@ VOID setBlockInsStartAddr(RTN rtn)
 			ADDRINT new_bbl_addr = INS_DirectBranchOrCallTargetAddress(ins);
 			if(INS_Category(ins) == XED_CATEGORY_COND_BR)
 			{
-				
+				//Add basic block of fallthrough and jmp target
 			}
 			if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || INS_Category(ins) == XED_CATEGORY_CALL || INS_Category(ins) == XED_CATEGORY_RET)
 			{
-				
+				//Add basic block only in jump target
 			}
 			BBL_Class* new_bbl = new BBL_Class();
 			new_bbl->start = new_bbl_addr;
 			//Move to the instruction you jump to (or not if you fall through)
 		}
 		
-		if (INS_IsDirectBranchOrCall(ins))
+		if (INS_IsIndirectBranchOrCall(ins))
 		{
 			//Move to the next address. We will close this bbl later
 		}
@@ -1723,6 +1724,7 @@ int main(int argc, char * argv[])
 		//To use the same interfaces as ex3
 		setTopRtnAddr();
 		
+		IMG_AddInstrumentFunction(ImageLoad_ex4, 0);
 		
 		//cerr << StringHex(top_rtn_addrs.front(),1) << endl; //TESTING TOP RTN ADRESS
 		PIN_StartProgramProbed();
