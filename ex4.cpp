@@ -1603,7 +1603,7 @@ BOOL INS_IsDirectBranchOrCall(INS ins)
 
 BOOL fitsInRtn(ADDRINT addr, ADDRINT start_addr, ADDRINT end_addr)
 {
-	if(addr > start_addr && addr < end_addr)
+	if(addr >= start_addr && addr < end_addr)
 		return true;
 	return false;
 }
@@ -1651,12 +1651,6 @@ VOID setBlockInsStartAddr(RTN rtn)
 				}
 				
 			}
-			
-			
-			/*if(was_cond)
-				continue;*/
-			//ins = FindInsByAddress
-			//Move to the instruction you jump to (or not if you fall through)
 		}
 		
 		if (INS_IsIndirectBranchOrCall(ins)) //We are done when this happens
@@ -1666,7 +1660,41 @@ VOID setBlockInsStartAddr(RTN rtn)
 	}
 	RTN_Close(rtn);
 }
-	
+
+VOID setBlockInsEndAddr (RTN rtn)
+{
+	RTN_Open(rtn);
+	//ADDRINT rtn_start = RTN_Address(rtn);
+	//ADDRINT rtn_end = INS_Address(RTN_InsTail(rtn));
+	std::list<BBL_Class*>::iterator it = bbl_list.begin(); //Starting from the start
+	for (INS ins = RTN_InsHead(rtn) ; INS_Valid(ins) ; ins = INS_Next(ins))
+	{
+		if (INS_IsDirectBranchOrCall(ins))
+		{
+			(*it)->finish = INS_Address(ins);
+			it++;
+		}
+	}
+	RTN_Close(rtn);
+}
+
+VOID bblListUnique()
+{
+	std::list<BBL_Class*>::iterator it = bbl_list.begin();
+	ADDRINT former = (*it)->start;
+	for (it++ /*Start with the second element*/; it != bbl_list.end(); /*Untill we reach the end*/)
+	{
+		if(former == (*it)->start)
+			it = bbl_list.erase(it);
+		else
+		{
+			former = (*it)->start;
+			it++;
+		}
+	}
+			
+}
+
 VOID ImageLoad_ex4(IMG img, VOID *v)
 {
 	if (!IMG_IsMainExecutable(img))
@@ -1683,16 +1711,20 @@ VOID ImageLoad_ex4(IMG img, VOID *v)
 			if(RTN_Address(rtn) != top_rtn_addr)
 				continue;
 			setBlockInsStartAddr(rtn);
+			//Sort by start addresses
+			bbl_list.sort(compareBbl);
+			bbl_list.reverse();
+			bblListUnique(); //After sorting and all, remove duplicates
+			setBlockInsEndAddr(rtn);
 		}
 	}
 	
-	//Sort by start addresses
-	bbl_list.sort(compareBbl);
-	bbl_list.reverse();
-	
+
+	int idx =0;
 	for (std::list<BBL_Class*>::iterator it = bbl_list.begin(); it != bbl_list.end(); it++)
 	{
-		cerr << StringHex((*it)->start,1) << endl;
+		cerr << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
+		idx++;
 	} //Test for start addresses
 	
 }
