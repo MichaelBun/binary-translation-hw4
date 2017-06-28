@@ -1601,47 +1601,67 @@ BOOL INS_IsDirectBranchOrCall(INS ins)
 }
 */
 
+BOOL fitsInRtn(ADDRINT addr, ADDRINT start_addr, ADDRINT end_addr)
+{
+	if(addr > start_addr && addr < end_addr)
+		return true;
+	return false;
+}
+
 VOID setBlockInsStartAddr(RTN rtn)
 {
 	RTN_Open(rtn);
+	ADDRINT rtn_start = RTN_Address(rtn);
+	ADDRINT rtn_end = INS_Address(RTN_InsTail(rtn));
 	INS ins = RTN_InsHead(rtn);
 	BBL_Class* new_bbl = new BBL_Class();
 	new_bbl->start = INS_Address(ins);
 	bbl_list.push_back(new_bbl);
 	for ( ; INS_Valid(ins) ; ins = INS_Next(ins))
-	{
+	{	
 		if (INS_IsDirectBranchOrCall(ins))
 		{
 			ADDRINT new_bbl_addr = INS_DirectBranchOrCallTargetAddress(ins);
-			bool was_cond = false;
+			//bool was_cond = false;
 			if(INS_Category(ins) == XED_CATEGORY_COND_BR)
 			{
-				was_cond = true;
-				BBL_Class* new_bbl1 = new BBL_Class();
-				BBL_Class* new_bbl2 = new BBL_Class();
-				new_bbl1->start = new_bbl_addr;
-				new_bbl2->start = INS_NextAddress(ins);
-				bbl_list.push_back(new_bbl1);
-				bbl_list.push_back(new_bbl2);
+				//was_cond = true;
+				if(fitsInRtn(new_bbl_addr,rtn_start,rtn_end))
+				{
+					BBL_Class* new_bbl1 = new BBL_Class();
+					new_bbl1->start = new_bbl_addr;
+					bbl_list.push_back(new_bbl1);
+				}
+				if(fitsInRtn(INS_NextAddress(ins),rtn_start,rtn_end))
+				{
+					BBL_Class* new_bbl2 = new BBL_Class();
+					new_bbl2->start = INS_NextAddress(ins);
+					bbl_list.push_back(new_bbl2);
+				}
 			}
-			else if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || INS_Category(ins) == XED_CATEGORY_CALL || INS_Category(ins) == XED_CATEGORY_RET)
+			else if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || 
+					INS_Category(ins) == XED_CATEGORY_CALL || 
+					INS_Category(ins) == XED_CATEGORY_RET)
 			{
-				BBL_Class* new_bbl1 = new BBL_Class();
-				new_bbl1->start = new_bbl_addr;
-				bbl_list.push_back(new_bbl1);
+				if(fitsInRtn(new_bbl_addr,rtn_start,rtn_end))
+				{
+					BBL_Class* new_bbl1 = new BBL_Class();
+					new_bbl1->start = new_bbl_addr;
+					bbl_list.push_back(new_bbl1);
+				}
 				
 			}
 			
 			
-			if(was_cond)
-				continue;
+			/*if(was_cond)
+				continue;*/
 			//ins = FindInsByAddress
 			//Move to the instruction you jump to (or not if you fall through)
 		}
 		
-		if (INS_IsIndirectBranchOrCall(ins))
+		if (INS_IsIndirectBranchOrCall(ins)) //We are done when this happens
 		{
-			//Move to the next address. We will close this bbl later
+			break;
 		}
 	}
 	RTN_Close(rtn);
@@ -1666,6 +1686,14 @@ VOID ImageLoad_ex4(IMG img, VOID *v)
 		}
 	}
 	
+	//Sort by start addresses
+	bbl_list.sort(compareBbl);
+	bbl_list.reverse();
+	
+	for (std::list<BBL_Class*>::iterator it = bbl_list.begin(); it != bbl_list.end(); it++)
+	{
+		cerr << StringHex((*it)->start,1) << endl;
+	} //Test for start addresses
 	
 }
 
@@ -1740,7 +1768,6 @@ int main(int argc, char * argv[])
 		
 		IMG_AddInstrumentFunction(ImageLoad_ex4, 0);
 		
-		//cerr << StringHex(top_rtn_addrs.front(),1) << endl; //TESTING TOP RTN ADRESS
 		PIN_StartProgramProbed();
 	}
 	else
