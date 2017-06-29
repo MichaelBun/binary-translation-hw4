@@ -1608,7 +1608,7 @@ BOOL fitsInRtn(ADDRINT addr, ADDRINT start_addr, ADDRINT end_addr)
 	return false;
 }
 
-VOID setBlockInsStartAddr(RTN rtn)
+VOID setBlockInsStartAddr(const RTN rtn)
 {
 	RTN_Open(rtn);
 	ADDRINT rtn_start = RTN_Address(rtn);
@@ -1661,18 +1661,35 @@ VOID setBlockInsStartAddr(RTN rtn)
 	RTN_Close(rtn);
 }
 
-VOID setBlockInsEndAddr (RTN rtn)
+VOID setBlockInsEndAddr (const RTN rtn)
 {
 	RTN_Open(rtn);
 	//ADDRINT rtn_start = RTN_Address(rtn);
 	//ADDRINT rtn_end = INS_Address(RTN_InsTail(rtn));
 	std::list<BBL_Class*>::iterator it = bbl_list.begin(); //Starting from the start
-	for (INS ins = RTN_InsHead(rtn) ; INS_Valid(ins) ; ins = INS_Next(ins))
+	std::list<BBL_Class*>::iterator nit = bbl_list.begin(); //We need the next iterator to find the end address
+	nit++;
+	INS ins = RTN_InsHead(rtn);
+	for (ins = INS_Next(ins) ; INS_Valid(ins) ; ins = INS_Next(ins))
 	{
-		if (INS_IsDirectBranchOrCall(ins))
+		//cerr << StringHex((*nit)->start,1) << endl;
+		//cerr << StringHex((*it)->start,1) << endl;
+		if(nit!=bbl_list.end())
+		{
+			if(INS_NextAddress(ins) == (*nit)->start)
+			{
+				//cerr << "We get here" << endl;
+				(*it)->finish = INS_Address(ins);
+				it++;
+				nit++;
+			}
+		}
+		else if (INS_IsBranchOrCall(ins))
 		{
 			(*it)->finish = INS_Address(ins);
 			it++;
+			if(nit!=bbl_list.end())
+				nit++;
 		}
 	}
 	RTN_Close(rtn);
