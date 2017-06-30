@@ -55,6 +55,7 @@ KNOB<BOOL>   KnobOptMostFreqRtn(KNOB_MODE_WRITEONCE,    "pintool",
 // Types and structures
 /* ======================================= */
 typedef struct _instr_table_t {
+    UINT64 bbl_count;
     UINT64 count;
 } instr_table_t;
 
@@ -68,9 +69,10 @@ public:
 	ADDRINT start;
     ADDRINT finish;
     UINT id; //Used as count in ex4
+    UINT num_of_calls; //for ex4
 	
 	BBL_Class():
-        start(0), finish(0), id(0){
+        start(0), finish(0), id(0), num_of_calls(1){
 	}
 
 	BBL_Class(ADDRINT _src, ADDRINT _dst, UINT _id):
@@ -104,7 +106,7 @@ public:
 
 
 private:
-
+   
 };
 //============================================
 
@@ -194,13 +196,11 @@ public:
 		for (std::list<BBL_Class*>::iterator it = bbllist.begin(); it != bbllist.end(); it++) {
 			
 			if ((*it)->getStart() == bbl->getStart() && (*it)->getFinish() == bbl->getFinish()) {
-				
+				//(*it)->num_of_calls++;
 				return (*it); //BBL aready in the list
 			}
 		}
 
-			
-		
 		bbllist.push_back(bbl);
 		return bbl;
 }
@@ -514,8 +514,9 @@ void TRACEINFO(TRACE trc, void* v)
 
 		// Insert a call to docount before every bbl, passing the number of instructions
 		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, curr_rtn->getIcountPtr(), IARG_UINT32, BBL_NumIns(bbl), IARG_END);
-		
-		curr_rtn -> addBbl(start_add, end_add);
+
+		BBL_Class* curr_bbl = curr_rtn -> addBbl(start_add, end_add);
+		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, &(curr_bbl->num_of_calls), IARG_UINT32, 1, IARG_END);
 
 		       
 		ADDRINT next_addr = INS_NextAddress( bbl_tail); 
@@ -582,7 +583,7 @@ VOID Fini(INT32 code, VOID *v)
 		for(bbl_it = (*rtn_it)->bbllist.begin(); bbl_it != (*rtn_it)->bbllist.end(); bbl_it++)  {
 
 			outFile << "\tBB" << (*bbl_it)->getId() << ": " << StringHex((*bbl_it)->getStart(), 1) \
-			<< " - " << StringHex((*bbl_it)->getFinish(), 1) << endl;
+			<< " - " << StringHex((*bbl_it)->getFinish(), 1) << "   " << (*bbl_it)->num_of_calls << endl;
 			
 			for (std::list<Edge_Class*>::iterator edge_it = (*rtn_it)->edgelist.begin(); edge_it != (*rtn_it)->edgelist.end(); edge_it++) {
 				if((*edge_it)->src == (*bbl_it)->getStart())
