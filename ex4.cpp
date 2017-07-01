@@ -55,7 +55,7 @@ KNOB<BOOL>   KnobOptMostFreqRtn(KNOB_MODE_WRITEONCE,    "pintool",
 // Types and structures
 /* ======================================= */
 typedef struct _instr_table_t {
-    UINT64 bbl_count;
+  //  UINT64 bbl_count;
     UINT64 count;
 } instr_table_t;
 
@@ -70,17 +70,21 @@ public:
     ADDRINT finish;
     UINT id; //Used as count in ex4
     UINT num_of_calls; //for ex4
-	
+	static int cnt;
+    
 	BBL_Class():
         start(0), finish(0), id(0), num_of_calls(1){
+        cnt++;
 	}
 
 	BBL_Class(ADDRINT _src, ADDRINT _dst, UINT _id):
         start(_src), finish(_dst), id(_id){
+            cnt++;
     }
 
 	BBL_Class(ADDRINT _src, ADDRINT _dst):
         start(_src), finish(_dst), id(0){
+            cnt++;
     }
 
     void setId(UINT _id){
@@ -108,6 +112,7 @@ public:
 private:
    
 };
+int  BBL_Class::cnt = 0;
 //============================================
 
 //================ Edge class ===================
@@ -419,7 +424,7 @@ VOID InitProfile()
     char profileFilename[MAX_FINE_NAME_SIZE];
 
     // profile map should have 1 64-bit integer for each of the counters we save
-    instrCountTableSize = (rtn_list.size())*3 + Edge_Class::cnt +1; //For RTNs we save address and count AND number of RTNs
+    instrCountTableSize = (rtn_list.size())*3 + Edge_Class::cnt +1 + BBL_Class::cnt; //For RTNs we save address and count AND number of RTNs
 	//cerr << (void*)instrCountTableSize << endl;
 
     //open the profile file:
@@ -581,9 +586,10 @@ VOID Fini(INT32 code, VOID *v)
 		std::list<BBL_Class*>::iterator bbl_it;
 
 		for(bbl_it = (*rtn_it)->bbllist.begin(); bbl_it != (*rtn_it)->bbllist.end(); bbl_it++)  {
-
+            UINT64 count = instrTable[j++].count += (*bbl_it)->num_of_calls;
+           // cerr << "count" << count;
 			outFile << "\tBB" << (*bbl_it)->getId() << ": " << StringHex((*bbl_it)->getStart(), 1) \
-			<< " - " << StringHex((*bbl_it)->getFinish(), 1) << "   " << (*bbl_it)->num_of_calls << endl;
+			<< " - " << StringHex((*bbl_it)->getFinish(), 1) << "   " << count << endl;
 			
 			for (std::list<Edge_Class*>::iterator edge_it = (*rtn_it)->edgelist.begin(); edge_it != (*rtn_it)->edgelist.end(); edge_it++) {
 				if((*edge_it)->src == (*bbl_it)->getStart())
