@@ -1743,13 +1743,14 @@ VOID ImageLoad_ex4(IMG img, VOID *v)
 		}
 	}
 	
-
+    outFile.open("rtn-output.txt"); 
 	int idx =0;
 	for (std::list<BBL_Class*>::iterator it = bbl_list.begin(); it != bbl_list.end(); it++)
 	{
-		cerr << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
+		outFile << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
 		idx++;
 	} //Test for start addresses
+    outFile.close(); 
 	
 }
 
