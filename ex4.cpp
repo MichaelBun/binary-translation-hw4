@@ -55,6 +55,7 @@ KNOB<BOOL>   KnobOptMostFreqRtn(KNOB_MODE_WRITEONCE,    "pintool",
 // Types and structures
 /* ======================================= */
 typedef struct _instr_table_t {
+  //  UINT64 bbl_count;
     UINT64 count;
 } instr_table_t;
 
@@ -68,17 +69,22 @@ public:
 	ADDRINT start;
     ADDRINT finish;
     UINT id; //Used as count in ex4
-	
+    UINT num_of_calls; //for ex4
+	static int cnt;
+    
 	BBL_Class():
-        start(0), finish(0), id(0){
+        start(0), finish(0), id(0), num_of_calls(1){
+        cnt++;
 	}
 
 	BBL_Class(ADDRINT _src, ADDRINT _dst, UINT _id):
         start(_src), finish(_dst), id(_id){
+            cnt++;
     }
 
 	BBL_Class(ADDRINT _src, ADDRINT _dst):
         start(_src), finish(_dst), id(0){
+            cnt++;
     }
 
     void setId(UINT _id){
@@ -104,8 +110,9 @@ public:
 
 
 private:
-
+   
 };
+int  BBL_Class::cnt = 0;
 //============================================
 
 //================ Edge class ===================
@@ -194,13 +201,11 @@ public:
 		for (std::list<BBL_Class*>::iterator it = bbllist.begin(); it != bbllist.end(); it++) {
 			
 			if ((*it)->getStart() == bbl->getStart() && (*it)->getFinish() == bbl->getFinish()) {
-				
+				//(*it)->num_of_calls++;
 				return (*it); //BBL aready in the list
 			}
 		}
 
-			
-		
 		bbllist.push_back(bbl);
 		return bbl;
 }
@@ -419,7 +424,7 @@ VOID InitProfile()
     char profileFilename[MAX_FINE_NAME_SIZE];
 
     // profile map should have 1 64-bit integer for each of the counters we save
-    instrCountTableSize = (rtn_list.size())*3 + Edge_Class::cnt +1; //For RTNs we save address and count AND number of RTNs
+    instrCountTableSize = (rtn_list.size())*3 + Edge_Class::cnt +1 + BBL_Class::cnt; //For RTNs we save address and count AND number of RTNs
 	//cerr << (void*)instrCountTableSize << endl;
 
     //open the profile file:
@@ -514,8 +519,9 @@ void TRACEINFO(TRACE trc, void* v)
 
 		// Insert a call to docount before every bbl, passing the number of instructions
 		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, curr_rtn->getIcountPtr(), IARG_UINT32, BBL_NumIns(bbl), IARG_END);
-		
-		curr_rtn -> addBbl(start_add, end_add);
+
+		BBL_Class* curr_bbl = curr_rtn -> addBbl(start_add, end_add);
+		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, &(curr_bbl->num_of_calls), IARG_UINT32, 1, IARG_END);
 
 		       
 		ADDRINT next_addr = INS_NextAddress( bbl_tail); 
@@ -580,9 +586,10 @@ VOID Fini(INT32 code, VOID *v)
 		std::list<BBL_Class*>::iterator bbl_it;
 
 		for(bbl_it = (*rtn_it)->bbllist.begin(); bbl_it != (*rtn_it)->bbllist.end(); bbl_it++)  {
-
+            UINT64 count = instrTable[j++].count += (*bbl_it)->num_of_calls;
+           // cerr << "count" << count;
 			outFile << "\tBB" << (*bbl_it)->getId() << ": " << StringHex((*bbl_it)->getStart(), 1) \
-			<< " - " << StringHex((*bbl_it)->getFinish(), 1) << endl;
+			<< " - " << StringHex((*bbl_it)->getFinish(), 1) << "   " << count << endl;
 			
 			for (std::list<Edge_Class*>::iterator edge_it = (*rtn_it)->edgelist.begin(); edge_it != (*rtn_it)->edgelist.end(); edge_it++) {
 				if((*edge_it)->src == (*bbl_it)->getStart())
@@ -1735,13 +1742,14 @@ VOID ImageLoad_ex4(IMG img, VOID *v)
 		}
 	}
 	
-
+    outFile.open("rtn-output.txt"); 
 	int idx =0;
 	for (std::list<BBL_Class*>::iterator it = bbl_list.begin(); it != bbl_list.end(); it++)
 	{
-		cerr << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
+		outFile << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
 		idx++;
 	} //Test for start addresses
+    outFile.close(); 
 	
 }
 
