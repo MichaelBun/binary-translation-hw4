@@ -1623,7 +1623,7 @@ VOID setBlockInsStartAddr(const RTN rtn)
 		{
 			ADDRINT new_bbl_addr = INS_DirectBranchOrCallTargetAddress(ins);
 			//bool was_cond = false;
-			if(INS_Category(ins) == XED_CATEGORY_COND_BR)
+			if(INS_Category(ins) == XED_CATEGORY_COND_BR || INS_Category(ins) == XED_CATEGORY_CALL)
 			{
 				//was_cond = true;
 				if(fitsInRtn(new_bbl_addr,rtn_start,rtn_end))
@@ -1639,8 +1639,7 @@ VOID setBlockInsStartAddr(const RTN rtn)
 					bbl_list.push_back(new_bbl2);
 				}
 			}
-			else if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR || 
-					INS_Category(ins) == XED_CATEGORY_CALL || 
+			else if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR ||  
 					INS_Category(ins) == XED_CATEGORY_RET)
 			{
 				if(fitsInRtn(new_bbl_addr,rtn_start,rtn_end))
