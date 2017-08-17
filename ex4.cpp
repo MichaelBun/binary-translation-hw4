@@ -521,6 +521,8 @@ void TRACEINFO(TRACE trc, void* v)
 		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, curr_rtn->getIcountPtr(), IARG_UINT32, BBL_NumIns(bbl), IARG_END);
 
 		BBL_Class* curr_bbl = curr_rtn -> addBbl(start_add, end_add);
+        
+        //for ex4. counter if entries to BBL
 		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, &(curr_bbl->num_of_calls), IARG_UINT32, 1, IARG_END);
 
 		       
@@ -1550,6 +1552,7 @@ VOID setTopRtnAddr()
         exit(1);
     }
 	j++;
+    
 	for (int i=0; i<NUMBER_TC_RTNS; i++)
 	{
 		/*UINT64 rtn_cnt = */ instrTable[j++].count;
@@ -1746,7 +1749,7 @@ VOID ImageLoad_ex4(IMG img, VOID *v)
 	int idx =0;
 	for (std::list<BBL_Class*>::iterator it = bbl_list.begin(); it != bbl_list.end(); it++)
 	{
-		outFile << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
+		outFile << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << "  " << (*it)->num_of_calls << endl;
 		idx++;
 	} //Test for start addresses
     outFile.close(); 
