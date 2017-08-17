@@ -521,8 +521,6 @@ void TRACEINFO(TRACE trc, void* v)
 		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, curr_rtn->getIcountPtr(), IARG_UINT32, BBL_NumIns(bbl), IARG_END);
 
 		BBL_Class* curr_bbl = curr_rtn -> addBbl(start_add, end_add);
-        
-        //for ex4. counter if entries to BBL
 		BBL_InsertCall(bbl, IPOINT_BEFORE, (AFUNPTR)docount, IARG_PTR, &(curr_bbl->num_of_calls), IARG_UINT32, 1, IARG_END);
 
 		       
@@ -1552,7 +1550,6 @@ VOID setTopRtnAddr()
         exit(1);
     }
 	j++;
-    
 	for (int i=0; i<NUMBER_TC_RTNS; i++)
 	{
 		/*UINT64 rtn_cnt = */ instrTable[j++].count;
@@ -1569,49 +1566,8 @@ VOID setTopRtnAddr()
 	//fd.close();
 }
 
-/* ===================================================================== */
-/* Our ex4 functions	                                                 */
-/* ===================================================================== */
-/*BOOL INS_IsIndirectBranchOrCall(INS ins)
-{
-    return  INS_IsBranchOrCall(ins) && !INS_IsDirectBranchOrCall(ins);
-}
- 
-BOOL INS_IsBranchOrCall(INS ins)
-{
-    if (INS_IsSyscall(ins))
-    {
-        return INS_SyscallIsTakenBranch(ins);
-    }
- 
-    xed_decoded_inst_t* xedd = INS_xed_dec(ins);
-    switch( xed_decoded_inst_get_category(xedd) )
-    {
-      case XED_CATEGORY_RET:
-      case XED_CATEGORY_CALL:
-      case XED_CATEGORY_COND_BR:
-      case XED_CATEGORY_UNCOND_BR:
-        return true;
-      default:
-        return false;
-    }
-}
- 
-BOOL INS_IsDirectBranchOrCall(INS ins)
-{
-    if ( INS_IsBranchOrCall(ins) )
-        if (!INS_IsFarJump(ins) && !INS_IsFarCall(ins)) {
-            // Looking for relative branches or calls. So they must have a
-            // displacement and that displacement must not be for the memory
-            // operation.
-            xed_operand_values_t* xedv = INS_xed_operand_values(ins);
-            return xed_operand_values_has_branch_displacement(xedv);
-        }
-    return false;
-}
-*/
 
-BOOL fitsInRtn(ADDRINT addr, ADDRINT start_addr, ADDRINT end_addr)
+BOOL fitsInAddrRange(ADDRINT addr, ADDRINT start_addr, ADDRINT end_addr)
 {
 	if(addr >= start_addr && addr < end_addr)
 		return true;
@@ -1636,13 +1592,13 @@ VOID setBlockInsStartAddr(const RTN rtn)
 			if(INS_Category(ins) == XED_CATEGORY_COND_BR || INS_Category(ins) == XED_CATEGORY_CALL)
 			{
 				//was_cond = true;
-				if(fitsInRtn(new_bbl_addr,rtn_start,rtn_end))
+				if(fitsInAddrRange(new_bbl_addr,rtn_start,rtn_end))
 				{
 					BBL_Class* new_bbl1 = new BBL_Class();
 					new_bbl1->start = new_bbl_addr;
 					bbl_list.push_back(new_bbl1);
 				}
-				if(fitsInRtn(INS_NextAddress(ins),rtn_start,rtn_end))
+				if(fitsInAddrRange(INS_NextAddress(ins),rtn_start,rtn_end))
 				{
 					BBL_Class* new_bbl2 = new BBL_Class();
 					new_bbl2->start = INS_NextAddress(ins);
@@ -1652,7 +1608,7 @@ VOID setBlockInsStartAddr(const RTN rtn)
 			else if(INS_Category(ins) == XED_CATEGORY_UNCOND_BR ||  
 					INS_Category(ins) == XED_CATEGORY_RET)
 			{
-				if(fitsInRtn(new_bbl_addr,rtn_start,rtn_end))
+				if(fitsInAddrRange(new_bbl_addr,rtn_start,rtn_end))
 				{
 					BBL_Class* new_bbl1 = new BBL_Class();
 					new_bbl1->start = new_bbl_addr;
@@ -1721,6 +1677,12 @@ VOID bblListUnique()
 			
 }
 
+VOID setBBLCntFromProf()
+{
+	
+	
+}
+
 VOID ImageLoad_ex4(IMG img, VOID *v)
 {
 	if (!IMG_IsMainExecutable(img))
@@ -1749,7 +1711,7 @@ VOID ImageLoad_ex4(IMG img, VOID *v)
 	int idx =0;
 	for (std::list<BBL_Class*>::iterator it = bbl_list.begin(); it != bbl_list.end(); it++)
 	{
-		outFile << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << "  " << (*it)->num_of_calls << endl;
+		outFile << "BBL" << idx << ": " << StringHex((*it)->start,1)<< " - " << StringHex((*it)->finish,1) << endl;
 		idx++;
 	} //Test for start addresses
     outFile.close(); 
